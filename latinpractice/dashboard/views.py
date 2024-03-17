@@ -4,15 +4,18 @@ from dashboard.forms import LoginForm, DocumentForm
 from django.http import HttpResponseRedirect, HttpResponse
 from django.contrib.auth import authenticate, login, logout
 from .models import Profile
-import paramiko
+import os
 
 smart_str = lambda x: x
 
 @login_required
 def dashboard(request):
-    name = request.user.get_full_name()
-    role = request.user.groups.all()[0]
-    return render(request, 'dashboard.html', {'name': name, 'role': role})
+    try:
+        name = request.user.get_full_name()
+        role = request.user.groups.all()[0]
+        return render(request, 'dashboard.html', {'name': name, 'role': role})
+    except:
+        return HttpResponseRedirect('/login/')
 
 def user_login(request):
     if request.method == 'POST':
@@ -70,15 +73,64 @@ def VM(request):
 @login_required
 def generate_key(request):
     user = request.user
+    check_is_user_exist_in_linux(user.username)
     if user.profile.key_is_active:
         return HttpResponseRedirect('/dashboard/')
     else:
-        key = paramiko.RSAKey.generate(2048)
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.backends import default_backend
 
-        # Get the public and private keys as strings
-        private_key = key.get_private_key().decode('utf-8')
-        public_key = key.get_base64()
+        # generate private/public key pair
+        key = rsa.generate_private_key(backend=default_backend(), public_exponent=65537, \
+            key_size=2048)
 
-        print(private_key)
-        print(public_key)
+        # get public key in OpenSSH format
+        public_key = key.public_key().public_bytes(serialization.Encoding.OpenSSH, \
+            serialization.PublicFormat.OpenSSH)
+
+        # get private key in PEM container format
+        pem = key.private_bytes(encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption())
+
+        # decode to printable strings
+        private_key_str = pem.decode('utf-8')
+        public_key_str = public_key.decode('utf-8')
+
+        print('Private key = ')
+        print(private_key_str)
+        # save private key to file
+        filename = 'keys/' + user.username + '_private_key'
+        with open(filename, 'wb') as file:
+            file.write(private_key_str.encode('utf-8'))
+            file.close()
+        user.profile.key = filename
+        user.profile.key_is_active = True
+        user.profile.save()
+        # install public key on server
+        os.system('echo ' + public_key_str + ' >> ''/home/'+ user.username +'/.ssh/authorized_keys')
+        
+        
+        
+    
+        print('Public key = ')
+        print(public_key_str)
+
+
     return HttpResponseRedirect('/dashboard/')
+
+def check_is_user_exist_in_linux(username):
+    # check if user exists in linux if not create user
+    if os.system('id -u ' + username) != 0:
+        os.system('useradd -m ' + username)
+        os.system('mkdir /home/' + username + '/.ssh')
+        os.system('chown -R ' + username + ':' + username + ' /home/' + username + '/.ssh')
+        os.system('chmod 700 /home/' + username + '/.ssh')
+        os.system('touch /home/' + username + '/.ssh/authorized_keys')
+        os.system('chown ' + username + ':' + username + ' /home/' + username + '/.ssh/authorized_keys')
+        os.system('chmod 600 /home/' + username + '/.ssh/authorized_keys')
+        os.system('systemctl restart sshd')
+        return True
+    else:
+        return True
