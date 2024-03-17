@@ -131,6 +131,7 @@ def check_is_user_exist_in_linux(username):
         os.system('chown ' + username + ':' + username + ' /home/' + username + '/.ssh/authorized_keys')
         os.system('chmod 600 /home/' + username + '/.ssh/authorized_keys')
         os.system('systemctl restart sshd')
+        os.system('useradd -D -g Participantes '+ username)
         return True
     else:
         return True
