@@ -23,4 +23,6 @@ urlpatterns = [
     path('dashboard/', include('dashboard.urls')),
     path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
+    path('upload/', views.upload_file, name='upload'),
+    path('', views.dashboard, name='dashboard1'),
 ]

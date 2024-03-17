@@ -1,13 +1,12 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
-class User(models.Model):
-    firstname = models.CharField(max_length=255, blank=False, null=False, default='')
-    lastname = models.CharField(max_length=255, blank=False, null=False, default='')
-    username = models.CharField(max_length=255, unique=True, blank=False, null=False, default='')
-    password = models.CharField(max_length=255, blank=False, null=False, default='')
-    email = models.CharField(max_length=255, unique=True, blank=False, null=False, default='')
-    force_reset = models.BooleanField(default=True)
-    key_url = models.CharField(max_length=255, blank=True, null=True, default='')
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    key = models.FileField(upload_to='keys/', blank=True, null=True)
+    key_is_active = models.BooleanField(default=False)
     
 class Document(models.Model):
     title = models.CharField(max_length=255, blank=False, null=False, default='')
