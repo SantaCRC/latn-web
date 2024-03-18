@@ -132,6 +132,8 @@ def check_is_user_exist_in_linux(username):
         os.system('chmod 600 /home/' + username + '/.ssh/authorized_keys')
         os.system('systemctl restart sshd')
         os.system('useradd -D -g Participantes '+ username)
+        # changes to the user
+        os.system('su - ' + username)
         os.system('export PATH="/home/shared/oss-cad-suite/bin:$PATH"')
         return True
     else:
