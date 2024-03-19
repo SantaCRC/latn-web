@@ -124,6 +124,7 @@ def check_is_user_exist_in_linux(username):
     # check if user exists in linux if not create user
     if os.system('id -u ' + username) != 0:
         os.system('useradd -m ' + username)
+        os.system('mkdir /home/' + username)
         os.system('mkdir /home/' + username + '/.ssh')
         os.system('chown -R ' + username + ':' + username + ' /home/' + username + '/.ssh')
         os.system('chmod 700 /home/' + username + '/.ssh')
